@@ -19,23 +19,23 @@ public class EmailAwsDTOTest {
     private Validator validator;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
+        this.validator = factory.getValidator();
     }
 
     private EmailAwsDTO createValidEmailAwsDTO() {
         EmailAwsDTO dto = new EmailAwsDTO();
-        dto.setRecipient("aws.valid@example.com");
-        dto.setRecipientName("AWS Valid Name");
-        dto.setSender("aws.sender@example.com");
+        dto.setRecipient("aws@example.com");
+        dto.setRecipientName("AWS User");
+        dto.setSender("aws-sender@example.com");
         dto.setSubject("AWS Subject");
         dto.setContent("AWS Content");
         return dto;
     }
 
     @Test
-    @DisplayName("Deve validar um EmailAwsDTO com dados válidos")
+    @DisplayName("Deve validar um EmailAwsDTO válido")
     void shouldValidateValidEmailAwsDTO() {
         EmailAwsDTO dto = createValidEmailAwsDTO();
         Set<ConstraintViolation<EmailAwsDTO>> violations = validator.validate(dto);
@@ -49,41 +49,52 @@ public class EmailAwsDTOTest {
         dto.setRecipient("");
         Set<ConstraintViolation<EmailAwsDTO>> violations = validator.validate(dto);
         assertFalse(violations.isEmpty());
-        assertEquals(1, violations.size());
-        assertEquals("Recipient (AWS) é obrigatório.", violations.iterator().next().getMessage());
+        assertEquals(1, violations.size()); // Apenas @NotBlank
+        assertEquals("O email do destinatário é obrigatório", violations.iterator().next().getMessage());
     }
 
     @Test
     @DisplayName("Não deve validar EmailAwsDTO com recipient inválido")
     void shouldNotValidateEmailAwsDTOWithInvalidRecipient() {
         EmailAwsDTO dto = createValidEmailAwsDTO();
-        dto.setRecipient("invalid-aws-email");
+        dto.setRecipient("invalid-aws-recipient");
         Set<ConstraintViolation<EmailAwsDTO>> violations = validator.validate(dto);
         assertFalse(violations.isEmpty());
-        assertEquals(1, violations.size());
-        assertEquals("Recipient (AWS) inválido.", violations.iterator().next().getMessage());
+        assertEquals(1, violations.size()); // Apenas @Email
+        assertEquals("Formato de email inválido", violations.iterator().next().getMessage());
     }
 
     @Test
     @DisplayName("Não deve validar EmailAwsDTO com recipient muito longo")
     void shouldNotValidateEmailAwsDTOWithLongRecipient() {
         EmailAwsDTO dto = createValidEmailAwsDTO();
-        dto.setRecipient("aws.emailcompridodemaisparaoquarentaecinco@longo.com"); // 50 caracteres
+        dto.setRecipient("a".repeat(40) + "@example.com"); // Total 51 caracteres, excede 45
         Set<ConstraintViolation<EmailAwsDTO>> violations = validator.validate(dto);
         assertFalse(violations.isEmpty());
         assertEquals(1, violations.size());
-        assertEquals("Recipient (AWS) deve ter no máximo 45 caracteres.", violations.iterator().next().getMessage());
+        assertEquals("O email do destinatário deve ter no máximo 45 caracteres", violations.iterator().next().getMessage());
+    }
+
+    @Test
+    @DisplayName("Não deve validar EmailAwsDTO com recipientName vazio")
+    void shouldNotValidateEmailAwsDTOWithEmptyRecipientName() {
+        EmailAwsDTO dto = createValidEmailAwsDTO();
+        dto.setRecipientName("");
+        Set<ConstraintViolation<EmailAwsDTO>> violations = validator.validate(dto);
+        assertFalse(violations.isEmpty());
+        assertEquals(1, violations.size());
+        assertEquals("O nome do destinatário é obrigatório", violations.iterator().next().getMessage());
     }
 
     @Test
     @DisplayName("Não deve validar EmailAwsDTO com recipientName muito longo")
     void shouldNotValidateEmailAwsDTOWithLongRecipientName() {
         EmailAwsDTO dto = createValidEmailAwsDTO();
-        dto.setRecipientName("Nome muito muito muito muito muito muito muito muito muito muito longo AWS"); // 70 caracteres
+        dto.setRecipientName("a".repeat(61)); // Mais de 60 caracteres
         Set<ConstraintViolation<EmailAwsDTO>> violations = validator.validate(dto);
         assertFalse(violations.isEmpty());
         assertEquals(1, violations.size());
-        assertEquals("Recipient Name (AWS) deve ter no máximo 60 caracteres.", violations.iterator().next().getMessage());
+        assertEquals("O nome do destinatário deve ter no máximo 60 caracteres", violations.iterator().next().getMessage());
     }
 
     @Test
@@ -94,28 +105,39 @@ public class EmailAwsDTOTest {
         Set<ConstraintViolation<EmailAwsDTO>> violations = validator.validate(dto);
         assertFalse(violations.isEmpty());
         assertEquals(1, violations.size());
-        assertEquals("Sender (AWS) inválido.", violations.iterator().next().getMessage());
+        assertEquals("Formato de email inválido", violations.iterator().next().getMessage());
+    }
+
+    @Test
+    @DisplayName("Não deve validar EmailAwsDTO com sender muito longo")
+    void shouldNotValidateEmailAwsDTOWithLongSender() {
+        EmailAwsDTO dto = createValidEmailAwsDTO();
+        dto.setSender("b".repeat(40) + "@example.com"); // Total 51 caracteres, excede 45
+        Set<ConstraintViolation<EmailAwsDTO>> violations = validator.validate(dto);
+        assertFalse(violations.isEmpty());
+        assertEquals(1, violations.size());
+        assertEquals("O email do remetente deve ter no máximo 45 caracteres", violations.iterator().next().getMessage());
     }
 
     @Test
     @DisplayName("Não deve validar EmailAwsDTO com subject muito longo")
     void shouldNotValidateEmailAwsDTOWithLongSubject() {
         EmailAwsDTO dto = createValidEmailAwsDTO();
-        dto.setSubject("Este é um assunto super super super super super super super super super super super super super super super super super super super super longo para AWS.");
+        dto.setSubject("c".repeat(121)); // Mais de 120 caracteres
         Set<ConstraintViolation<EmailAwsDTO>> violations = validator.validate(dto);
         assertFalse(violations.isEmpty());
         assertEquals(1, violations.size());
-        assertEquals("Subject (AWS) deve ter no máximo 120 caracteres.", violations.iterator().next().getMessage());
+        assertEquals("O assunto do email deve ter no máximo 120 caracteres", violations.iterator().next().getMessage());
     }
 
     @Test
     @DisplayName("Não deve validar EmailAwsDTO com content muito longo")
     void shouldNotValidateEmailAwsDTOWithLongContent() {
         EmailAwsDTO dto = createValidEmailAwsDTO();
-        dto.setContent("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Este é um conteúdo muito longo para AWS.");
+        dto.setContent("d".repeat(257)); // Mais de 256 caracteres
         Set<ConstraintViolation<EmailAwsDTO>> violations = validator.validate(dto);
         assertFalse(violations.isEmpty());
         assertEquals(1, violations.size());
-        assertEquals("Content (AWS) deve ter no máximo 256 caracteres.", violations.iterator().next().getMessage());
+        assertEquals("O conteúdo do email deve ter no máximo 256 caracteres", violations.iterator().next().getMessage());
     }
 }

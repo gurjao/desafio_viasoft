@@ -26,7 +26,7 @@ public class EmailServiceTest {
     public void setUp() {
         ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
         validator = factory.getValidator();
-        emailService = new EmailServiceImpl(validator); // Instancia o serviço com o validator
+        emailService = new EmailServiceImpl(validator);
     }
 
     private EmailDTO createValidEmailDTO() {
@@ -43,7 +43,7 @@ public class EmailServiceTest {
     @DisplayName("Deve adaptar EmailDTO para EmailAwsDTO corretamente")
     void shouldAdaptEmailDTOToEmailAwsDTO() {
         EmailDTO emailDTO = createValidEmailDTO();
-        EmailAwsDTO awsDTO = emailService.adaptarParaAws(emailDTO); // Chamando o método adaptado
+        EmailAwsDTO awsDTO = emailService.adaptarParaAws(emailDTO);
 
         assertNotNull(awsDTO);
         assertEquals(emailDTO.getDestinatarioEmail(), awsDTO.getRecipient());
@@ -100,7 +100,7 @@ public class EmailServiceTest {
         });
 
         assertEquals(1, exception.getConstraintViolations().size());
-        assertEquals("Sender (AWS) inválido.", exception.getConstraintViolations().iterator().next().getMessage());
+        assertEquals("Formato de email inválido", exception.getConstraintViolations().iterator().next().getMessage());
     }
 
     @Test

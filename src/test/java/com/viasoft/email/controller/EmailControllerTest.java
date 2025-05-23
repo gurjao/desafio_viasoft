@@ -12,8 +12,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.core.env.Environment;
+
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -22,20 +25,24 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(EmailController.class) // Testa apenas o EmailController
+@WebMvcTest(EmailController.class)
 public class EmailControllerTest {
 
     @Autowired
-    private MockMvc mockMvc; // Usado para simular requisições HTTP
+    private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper; // Para converter objetos em JSON
+    private ObjectMapper objectMapper;
 
-    @MockBean // Cria um mock do EmailService
+    @MockBean
     private EmailService emailService;
 
-    @MockBean // Cria um mock do Environment
-    private Environment environment;
+    private static String tipoIntegracao = "AWS";
+
+    @DynamicPropertySource
+    static void dynamicProps(DynamicPropertyRegistry registry) {
+        registry.add("mail.integracao", () -> tipoIntegracao);
+    }
 
     private EmailDTO createValidEmailDTO() {
         EmailDTO dto = new EmailDTO();
@@ -48,16 +55,13 @@ public class EmailControllerTest {
     }
 
     @Test
-    @DisplayName("Deve retornar status 204 NO CONTENT ao enviar email com sucesso (AWS)")
+    @DisplayName("Deve retornar 204 NO CONTENT ao enviar email com sucesso (AWS)")
     void shouldReturn204WhenSendingEmailSuccessAws() throws Exception {
+        tipoIntegracao = "AWS";
         EmailDTO emailDTO = createValidEmailDTO();
-        EmailAwsDTO awsDTO = new EmailAwsDTO(); // Objeto de retorno simulado
-        awsDTO.setRecipient("valid@example.com"); // Preencher com dados mínimos para evitar NullPointerException
+        EmailAwsDTO awsDTO = new EmailAwsDTO();
+        awsDTO.setRecipient("valid@example.com");
 
-        // Simula o comportamento do Environment.getProperty
-        when(environment.getProperty("mail.integracao")).thenReturn("AWS");
-
-        // Simula o comportamento do emailService.adaptarEmailParaIntegracao
         when(emailService.adaptarEmailParaIntegracao(any(EmailDTO.class), eq("AWS")))
                 .thenReturn(awsDTO);
 
@@ -66,21 +70,17 @@ public class EmailControllerTest {
                         .content(objectMapper.writeValueAsString(emailDTO)))
                 .andExpect(status().isNoContent());
 
-        // Verifica se o método do serviço foi chamado corretamente
         verify(emailService).adaptarEmailParaIntegracao(any(EmailDTO.class), eq("AWS"));
     }
 
     @Test
-    @DisplayName("Deve retornar status 204 NO CONTENT ao enviar email com sucesso (OCI)")
+    @DisplayName("Deve retornar 204 NO CONTENT ao enviar email com sucesso (OCI)")
     void shouldReturn204WhenSendingEmailSuccessOci() throws Exception {
+        tipoIntegracao = "OCI";
         EmailDTO emailDTO = createValidEmailDTO();
-        EmailOciDTO ociDTO = new EmailOciDTO(); // Objeto de retorno simulado
-        ociDTO.setRecipientEmail("valid@example.com"); // Preencher com dados mínimos
+        EmailOciDTO ociDTO = new EmailOciDTO();
+        ociDTO.setRecipientEmail("valid@example.com");
 
-        // Simula o comportamento do Environment.getProperty
-        when(environment.getProperty("mail.integracao")).thenReturn("OCI");
-
-        // Simula o comportamento do emailService.adaptarEmailParaIntegracao
         when(emailService.adaptarEmailParaIntegracao(any(EmailDTO.class), eq("OCI")))
                 .thenReturn(ociDTO);
 
@@ -89,36 +89,29 @@ public class EmailControllerTest {
                         .content(objectMapper.writeValueAsString(emailDTO)))
                 .andExpect(status().isNoContent());
 
-        // Verifica se o método do serviço foi chamado corretamente
         verify(emailService).adaptarEmailParaIntegracao(any(EmailDTO.class), eq("OCI"));
     }
 
     @Test
-    @DisplayName("Deve retornar status 400 BAD REQUEST quando o DTO de entrada é inválido")
+    @DisplayName("Deve retornar 400 BAD REQUEST com DTO inválido")
     void shouldReturn400WhenInputDTOIsInvalid() throws Exception {
-        EmailDTO invalidEmailDTO = new EmailDTO(); // DTO inválido intencionalmente
-        invalidEmailDTO.setDestinatarioEmail("invalid-email"); // E-mail inválido para forçar erro
-
-        // Não precisamos mockar o serviço aqui, pois a validação @Valid no controller
-        // intercepta antes de chamar o serviço se o DTO de entrada for inválido.
-        // O Spring já cuida dessa validação.
+        EmailDTO dto = new EmailDTO();
+        dto.setDestinatarioEmail("invalid-email");
 
         mockMvc.perform(post("/api/email/enviar-email")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(invalidEmailDTO)))
+                        .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    @DisplayName("Deve retornar status 400 BAD REQUEST quando o serviço lança ConstraintViolationException")
+    @DisplayName("Deve retornar 400 BAD REQUEST quando o serviço lança ConstraintViolationException")
     void shouldReturn400WhenServiceThrowsConstraintViolationException() throws Exception {
+        tipoIntegracao = "AWS";
         EmailDTO emailDTO = createValidEmailDTO();
 
-        when(environment.getProperty("mail.integracao")).thenReturn("AWS");
-
-        // Simula o serviço lançando uma exceção de validação (como se o DTO adaptado fosse inválido)
-        when(emailService.adaptarEmailParaIntegracao(any(EmailDTO.class), any(String.class)))
-                .thenThrow(new ConstraintViolationException("Simulated validation error", null)); // Usar um conjunto vazio ou null para simplificar o mock
+        when(emailService.adaptarEmailParaIntegracao(any(EmailDTO.class), eq("AWS")))
+                .thenThrow(new ConstraintViolationException("Simulated validation error", Set.of()));
 
         mockMvc.perform(post("/api/email/enviar-email")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -127,13 +120,11 @@ public class EmailControllerTest {
     }
 
     @Test
-    @DisplayName("Deve retornar status 400 BAD REQUEST quando o serviço lança IllegalArgumentException")
+    @DisplayName("Deve retornar 400 BAD REQUEST quando o serviço lança IllegalArgumentException")
     void shouldReturn400WhenServiceThrowsIllegalArgumentException() throws Exception {
+        tipoIntegracao = "UNKNOWN";
         EmailDTO emailDTO = createValidEmailDTO();
 
-        when(environment.getProperty("mail.integracao")).thenReturn("UNKNOWN"); // Simula integração desconhecida
-
-        // Simula o serviço lançando uma exceção para integração desconhecida
         when(emailService.adaptarEmailParaIntegracao(any(EmailDTO.class), eq("UNKNOWN")))
                 .thenThrow(new IllegalArgumentException("Tipo de integração desconhecido: UNKNOWN"));
 
