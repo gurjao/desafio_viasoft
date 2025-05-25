@@ -19,6 +19,7 @@ A requisição deve ser feita utilizando o Postman ou uma ferramenta similar.
     1. O objeto recebido no Controller será uma instância da classe criada acima.
 3. Crie em `application.properties` um atributo chamado `mail.integracao`, que o valor pode ser configurado com **OCI** ou **AWS**.
 4. Crie a classe chamada **EmailAwsDTO**, com os seguintes atributos:
+
 | Campo         | Descrição                               |
 |---------------|-----------------------------------------|
 | recipient     | E-mail destinatário: Max: 45 caracteres |
@@ -28,6 +29,7 @@ A requisição deve ser feita utilizando o Postman ou uma ferramenta similar.
 | content       | Conteúdo do e-mail. Max: 256 caracteres |
 
 5. Crie a classe chamada EmailOciDTO, com os seguintes atributos:
+
 | Campo          | Descrição                               |
 |----------------|-----------------------------------------|
 | recipientEmail | E-mail destinatário: Max: 40 caracteres |
